@@ -13,8 +13,8 @@ export const authApi = {
         url: `${backendDomain}/api/auth/forgot-password`,
         method: 'post'
     },
-    newPassword: {
-        url: `${backendDomain}/api/auth/new-password`,
+    resetPassword: {
+        url: `${backendDomain}/api/auth/reset-password`,
         method: 'put'
     }
 }
@@ -26,6 +26,10 @@ export const userApi = {
     },
     getAllUser: {
         url: `${backendDomain}/api/users`,
+        method: 'get'
+    },
+    getAllUserBySearch: {
+        url: `${backendDomain}/api/users/search`,
         method: 'get'
     },
     createUser: {

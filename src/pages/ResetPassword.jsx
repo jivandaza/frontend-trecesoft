@@ -1,12 +1,14 @@
 import React, {useState} from 'react';
-import {Link, useNavigate} from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import {FaEye, FaEyeSlash} from "react-icons/fa";
 import {authApi} from "../common/index.js";
 import toastr from "toastr";
+import {jwtDecode} from "jwt-decode";
 
-const NewPassword = () => {
+const ResetPassword = () => {
 
     const navigation = useNavigate();
+    const { token } = useParams();
 
     const [showPassword, setShowPassword] = useState(false);
     const [data, setData] = useState({
@@ -27,22 +29,25 @@ const NewPassword = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const response = await fetch(authApi.newPassword.url, {
-            method: authApi.newPassword.method,
+        const userDecoded = jwtDecode(token);
+
+        const response = await fetch(`${authApi.resetPassword.url}/${userDecoded.id}`, {
+            method: authApi.resetPassword.method,
             credentials: 'include',
             headers: {
-                'content-type': 'application/json'
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(data)
         });
 
-        const { message, error } = await response.json();
+        const { message } = await response.json();
 
         if ( response.ok ) {
             toastr.success(message);
             navigation('/');
-        } else if (response.status === 400)
-            toastr.error(error);
+        } else
+            toastr.error(message);
     };
 
     return (
@@ -52,7 +57,7 @@ const NewPassword = () => {
                     onSubmit={handleSubmit}
                     className='flex flex-col gap-2 w-full'
                 >
-                    <h2 className='font-bold uppercase'>Forgot Password</h2>
+                    <h2 className='font-bold uppercase'>Reset Password</h2>
 
                     <hr className='border-t-2 border-gray-300 my-2' />
 
@@ -84,4 +89,4 @@ const NewPassword = () => {
     );
 };
 
-export default NewPassword;
+export default ResetPassword;

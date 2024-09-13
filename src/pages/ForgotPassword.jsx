@@ -1,10 +1,12 @@
 import React, {useState} from 'react';
 import {FaEye, FaEyeSlash} from "react-icons/fa";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {authApi} from "../common/index.js";
 import toastr from "toastr";
 
 const ForgotPassword = () => {
+
+    const navigation = useNavigate();
 
     const [data, setData] = useState({
         email: ''
@@ -33,12 +35,13 @@ const ForgotPassword = () => {
             body: JSON.stringify(data)
         });
 
-        const { message, error } = await response.json();
+        const { message } = await response.json();
 
         if ( response.ok ) {
             toastr.success(message);
-        } else if (response.status === 400)
-            toastr.error(error);
+            navigation('/');
+        } else if (response.status === 400 || response.status === 500)
+            toastr.error(message);
     };
 
     return (

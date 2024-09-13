@@ -4,6 +4,7 @@ import {Outlet, useNavigate} from "react-router-dom";
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
 import {useDispatch, useSelector} from "react-redux";
+import useSessionHandler from './hooks/useSessionHandler.jsx';
 import {setUserDetails} from "./store/userSlice.js";
 import {userApi} from "./common/index.js";
 import { jwtDecode } from 'jwt-decode';
@@ -15,9 +16,9 @@ function App() {
     const navigation = useNavigate();
     const dispatch = useDispatch();
 
-    const user = useSelector(state => state?.user?.user);
+    const { handleSessionClosure } = useSessionHandler();
 
-    //const displayComponent = !user || user?.role === ROLE.GENERAL;
+    const user = useSelector(state => state?.user?.user);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -40,12 +41,15 @@ function App() {
 
             const data = await response.json();
 
-            if ( response.ok )
+            const status = response.status;
+
+            if ( response.ok ){
                 dispatch(setUserDetails(data));
-            else {
-                localStorage.removeItem('token');
-                dispatch(setUserDetails(null));
-                toastr.info('Session closed...');
+                navigation('/dashboard');
+            } else if ( status === 403 || status === 401 || status === 404 ) {
+                handleSessionClosure(data.message);
+            } else if ( status === 500 ) {
+                toastr.error(data.message);
                 navigation('/');
             }
         }
@@ -72,7 +76,9 @@ function App() {
         } else if (user) {
             navigation('/dashboard');
         }
-    }, [user]);
+    }, [
+
+    ]);
 
     return (
         <>

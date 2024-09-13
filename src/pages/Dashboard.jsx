@@ -1,16 +1,10 @@
 import React, {useEffect, useState} from 'react';
-import {useDispatch, useSelector} from "react-redux";
-import {setUserDetails} from "../store/userSlice.js";
-import toastr from 'toastr';
-import {Link, useNavigate} from "react-router-dom";
 import AllUsers from "../components/AllUsers.jsx";
+import useSessionHandler from "../hooks/useSessionHandler.jsx";
 
 const Dashboard = () => {
 
-    const navigation = useNavigate();
-    const dispatch = useDispatch();
-
-    const user = useSelector(state => state?.user?.user);
+    const { handleSessionClosure } = useSessionHandler();
 
     const [showBtnUsers, setShowBtnUsers] = useState(false);
     const [displayUsers, setDisplayUsers] = useState(false);
@@ -22,13 +16,6 @@ const Dashboard = () => {
 
     const handleBtnUsers = () => {
         setDisplayUsers(true);
-    }
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        dispatch(setUserDetails(null));
-        toastr.info('Session closed...');
-        navigation('/');
     }
 
     return (
@@ -59,7 +46,11 @@ const Dashboard = () => {
                 </div>
 
                 <div className='mb-4 mx-auto'>
-                    <button className='max-w-[150px] px-4 py-2 bg-red-500 font-semibold text-white tracking-wider hover:opacity-80' onClick={handleLogout}>Logout</button>
+                    <button
+                        className='max-w-[150px] px-4 py-2 bg-red-500 font-semibold text-white tracking-wider hover:opacity-80'
+                        onClick={() => handleSessionClosure('Log out')}
+                    >Logout
+                    </button>
                 </div>
             </aside>
             <main className='min-h-screen w-full py-4 px-8'>

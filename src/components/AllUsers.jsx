@@ -10,34 +10,63 @@ import moment from "moment";
 import {ROLE} from "../constants/index.js";
 import FormUser from "./FormUser.jsx";
 import {FaEdit, FaTrash} from "react-icons/fa";
+import useSessionHandler from "../hooks/useSessionHandler.jsx";
 
 const AllUsers = () => {
+
+    const { handleSessionClosure } = useSessionHandler();
 
     const navigation = useNavigate();
     const dispatch = useDispatch();
 
-    const location = useLocation();
-    const urlSearch = new URLSearchParams(location?.search);
-    const searchQuery = urlSearch.getAll('q');
-
     const user = useSelector(state => state?.user?.user);
-    const isSuperAdmin = user.role.description === ROLE.ADMIN;
+    const isSuperAdmin = user?.role?.description === ROLE.ADMIN;
 
-    const [search, setSearch] = useState(searchQuery);
     const [users, setUsers] = useState([]);
     const [userUpdate, setUserUpdate] = useState({});
     const [showCreateUser, setShowCreateUser] = useState(false);
     const [showUpdateUser, setShowUpdateUser] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e)  => {
         const { value } = e.target;
-        setSearch(value);
 
-        if ( value )
-            navigation(`/search?q=${value}`);
+        if ( value.trim() )
+            await fetchSearchUser(value);
         else
-            navigation('/search');
+            await fetchAllUsers();
+    };
+
+    const fetchSearchUser = async (search) => {
+        setIsLoading(true);
+
+        const token = localStorage.getItem('token');
+
+        if (token) {
+            const response = await fetch(`${userApi.getAllUserBySearch.url}/${search}`, {
+                method: userApi.getAllUserBySearch.method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+            const status = response.status;
+
+            if ( response.ok )
+                setUsers(data);
+            else if ( status === 403 || status === 401 ) {
+                handleSessionClosure(data.message);
+            } else if ( status === 500 ) {
+                toastr.error(data.message);
+            }
+        } else {
+            handleSessionClosure('Session closed');
+        }
+
+        setIsLoading(false);
     };
 
     const fetchAllUsers = async () => {
@@ -46,8 +75,6 @@ const AllUsers = () => {
         const token = localStorage.getItem('token');
 
         if (token) {
-            const userDecoded = jwtDecode(token);
-
             const response = await fetch(userApi.getAllUser.url, {
                 method: userApi.getAllUser.method,
                 headers: {
@@ -58,21 +85,23 @@ const AllUsers = () => {
             });
 
             const data = await response.json();
+            const status = response.status;
 
             if ( response.ok )
                 setUsers(data);
-            else {
-                localStorage.removeItem('token');
-                dispatch(setUserDetails(null));
-                toastr.info('Session closed...');
-                navigation('/');
+            else if ( status === 403 || status === 401 ) {
+                handleSessionClosure(data.message);
+            } else if ( status === 500 ) {
+                toastr.error(data.message);
             }
+        } else {
+            handleSessionClosure('Session closed');
         }
 
         setIsLoading(false);
     };
 
-    const fetchCreateUser = async (data, id) => {
+    const fetchCreateUser = async (data) => {
         const token = localStorage.getItem('token');
 
         if (token) {
@@ -85,20 +114,22 @@ const AllUsers = () => {
                 body: JSON.stringify(data)
             });
 
-            const { error } = await response.json();
+            const { message } = await response.json();
+            const status = response.status;
 
             if ( response.ok ) {
                 toastr.success('Created successfully');
                 setShowCreateUser(false);
-                fetchAllUsers();
-            } else if (response.status === 400) {
-                toastr.error(error);
-            } else {
-                localStorage.removeItem('token');
-                dispatch(setUserDetails(null));
-                toastr.info('Session closed...');
-                navigation('/');
+                await fetchAllUsers();
+            } else if (status === 400 ) {
+                toastr.error(message);
+            } else if ( status === 403 || status === 401 ) {
+                handleSessionClosure(message);
+            } else if ( status === 500 ) {
+                toastr.error(message);
             }
+        } else {
+            handleSessionClosure('Session closed');
         }
     };
 
@@ -106,6 +137,7 @@ const AllUsers = () => {
         const token = localStorage.getItem('token');
 
         if (token) {
+            data.role = data.role?._id;
 
             const response = await fetch(`${userApi.updateUser.url}/${id}`, {
                 method: userApi.updateUser.method,
@@ -116,20 +148,22 @@ const AllUsers = () => {
                 body: JSON.stringify(data)
             });
 
-            const { error } = await response.json();
+            const { message } = await response.json();
+            const status = response.status;
 
             if ( response.ok ) {
                 toastr.success('Update successfully');
                 setShowUpdateUser(false);
-                fetchAllUsers();
-            } else if (response.status === 400) {
-                toastr.error(error);
-            } else {
-                localStorage.removeItem('token');
-                dispatch(setUserDetails(null));
-                toastr.info('Session closed...');
-                navigation('/');
+                await fetchAllUsers();
+            } else if ( status === 404 || status === 400 ) {
+                toastr.error(message);
+            } else if ( status === 403 || status === 401 ) {
+                handleSessionClosure(message);
+            } else if ( status === 500 ) {
+                toastr.error(message);
             }
+        } else {
+            handleSessionClosure('Session closed');
         }
     };
 
@@ -149,17 +183,22 @@ const AllUsers = () => {
                     }
                 });
 
-                await response.json();
+                const { message } = await response.json();
+                const status = response.status;
 
                 if ( response.ok ) {
                     toastr.success('Delete successfully');
-                    fetchAllUsers();
-                } else {
-                    localStorage.removeItem('token');
-                    dispatch(setUserDetails(null));
-                    toastr.info('Session closed...');
-                    navigation('/');
+                    await fetchAllUsers();
+                } else if ( status === 404) {
+                    toastr.error(message);
+                    await fetchAllUsers();
+                } else if ( status === 403 || status === 401 ) {
+                    handleSessionClosure(message);
+                } else if ( status === 500 ) {
+                    toastr.error(message);
                 }
+            } else {
+                handleSessionClosure('Session closed');
             }
         }
     };
@@ -174,10 +213,9 @@ const AllUsers = () => {
             <div className='flex items-center justify-between mb-4 p-2 w-60 border border-black ml-auto'>
                 <input
                     type='text'
-                    placeholder='Buscar'
+                    placeholder='Search'
                     className='h-full w-full outline-none bg-transparent'
                     onChange={handleSearch}
-                    value={search}
                 />
                 <div
                     className='text-lg min-w-[20px] flex items-center justify-center text-black'
@@ -206,6 +244,7 @@ const AllUsers = () => {
                         <th>Email</th>
                         <th>Name</th>
                         <th>Role</th>
+                        <th>Status</th>
                         <th>Creation Date</th>
                         {
                             isSuperAdmin && (
@@ -225,6 +264,7 @@ const AllUsers = () => {
                                         <td className='border'>{user?.email}</td>
                                         <td className='border'>{user?.name}</td>
                                         <td className='border'>{user?.role?.description}</td>
+                                        <td className='border'>{user?.status ? 'Active' : 'Inactive'}</td>
                                         <td className='border'>{moment(user?.createdAt).format('LL')}</td>
                                         {
                                             isSuperAdmin && (
@@ -269,7 +309,7 @@ const AllUsers = () => {
                         title={'Create User'}
                         fetchData={fetchCreateUser}
                         user={null}
-                        isCreated={true}
+                        isCreateForm={true}
                     />
                 )
             }
@@ -280,6 +320,7 @@ const AllUsers = () => {
                         title={'Update User'}
                         fetchData={fetchUpdateUser}
                         user={userUpdate}
+                        isCreateForm={false}
                     />
                 )
             }

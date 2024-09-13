@@ -43,11 +43,11 @@ const Login = () => {
         const { message, token, error } = await response.json();
 
         if ( response.ok ) {
-            toastr.success(message);
             localStorage.setItem('token', token);
             await fetchUserDetails();
             navigation('/dashboard');
-        } else if (response.status === 400)
+            toastr.success(message);
+        } else if (response.status === 400 || response.status === 500)
             toastr.error(error);
     };
 

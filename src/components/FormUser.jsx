@@ -13,31 +13,37 @@ const FormUser = ({
     title,
     fetchData,
     user,
-    isCreated
+    isCreateForm
 }) => {
 
     const navigation = useNavigate();
     const dispatch = useDispatch();
 
-    const [showPassword, setShowPassword] = useState(false);
+    const [status, setStatus] = useState([true, false]);
     const [roles, setRoles] = useState([]);
     const [data, setData] = useState({
         username: user?.username || '',
         email: user?.email || '',
-        password: '',
         name: user?.name || '',
-        role: user?.role || ''
+        role: user?.role || '',
+        status: user?.status
     });
 
     const handleOneChange = (e) => {
         const { name, value } = e.target;
 
-        setData((previousValue) => {
-            return {
+        if (name === 'role' && !isCreateForm) {
+            const selectedRole = roles.find((role) => role._id === value);
+            setData((previousValue) => ({
+                ...previousValue,
+                role: selectedRole
+            }));
+        } else {
+            setData((previousValue) => ({
                 ...previousValue,
                 [name]: value
-            }
-        });
+            }));
+        }
     };
 
     const fetchAllRoles = async () => {
@@ -127,31 +133,6 @@ const FormUser = ({
                         />
                     </div>
 
-                    {
-                        isCreated && (
-                            <>
-                                <label htmlFor='password' className='mb-1'>Password:</label>
-                                <div className='bg-slate-100 p-2 flex items-center border border-black'>
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        id='password'
-                                        name='password'
-                                        className='w-full h-full outline-none bg-transparent'
-                                        onChange={handleOneChange}
-                                        value={data.password}
-                                    />
-                                    <div className='cursor-pointer text-xl' onClick={
-                                        () => setShowPassword((value) => !value)
-                                    }>
-                                        <span>
-                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                        </span>
-                                    </div>
-                                </div>
-                            </>
-                        )
-                    }
-
                     <label
                         htmlFor="role"
                         className='mb-1'
@@ -163,18 +144,50 @@ const FormUser = ({
                         value={data.role}
                         onChange={handleOneChange}
                     >
-                        <option value={''}>Select role</option>
+                        {
+                            isCreateForm ? (
+                                <option value=''>Select role</option>
+                            ) : (
+                                <option value={data?.role?._id}>{data?.role?.description}</option>
+                            )
+                        }
                         {
                             roles.map((role, index) => {
-                                return (
-                                    <option
-                                        value={role?._id}
-                                        key={role?._id+index}
-                                    >{role?.description}</option>
-                                )
+                                if ( isCreateForm || role?._id !== data?.role?._id) {
+                                    return (
+                                        <option
+                                            value={role?._id}
+                                            key={role?._id+index}
+                                        >{role?.description}</option>
+                                    )
+                                }
                             })
                         }
                     </select>
+
+                    {
+                        !isCreateForm && (
+                            <select
+                                id='status'
+                                name='status'
+                                className='mb-4 py-2 cursor-pointer outline-none bg-slate-100 flex items-center border border-black'
+                                value={data.status}
+                                onChange={handleOneChange}
+                            >
+                                {
+                                    status.map((item, index) => {
+                                        const result = item === data?.status;
+                                        return (
+                                            <option
+                                                value={result}
+                                                key={index}
+                                            >{result ? 'active' : 'Inactive'}</option>
+                                        )
+                                    })
+                                }
+                            </select>
+                        )
+                    }
 
                     <button
                         className='px-3 py-2 mt-6 bg-cyan-400 text-white font-semibold hover:bg-cyan-600'
